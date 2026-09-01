@@ -1,0 +1,64 @@
+{
+  "id": "applications",
+  "name": "Applications",
+  "icon": "briefcase",
+  "tagline": "Sort job descriptions against your CV, or CVs against a role.",
+  "decisionQuestion": "Is this role a strong fit for my CV?",
+  "decisionLabels": {
+    "include": "Strong fit",
+    "exclude": "Pass",
+    "maybe": "Possible fit"
+  },
+  "criteriaTemplate": [
+    {
+      "id": "seniority",
+      "label": "Seniority",
+      "value": "Graduate or up to two years of experience. Exclude senior and lead roles."
+    },
+    {
+      "id": "must-have",
+      "label": "Must have",
+      "value": "Python or TypeScript named in the requirements."
+    },
+    {
+      "id": "location",
+      "label": "Location",
+      "value": "UK based, remote or hybrid acceptable."
+    },
+    {
+      "id": "sponsorship",
+      "label": "Sponsorship",
+      "value": "Exclude roles that state no visa sponsorship."
+    }
+  ],
+  "extractionFields": [
+    {
+      "id": "met",
+      "label": "Requirements met",
+      "hint": "Which must-haves the CV satisfies"
+    },
+    {
+      "id": "gaps",
+      "label": "Gaps",
+      "hint": "Named requirements the CV does not evidence"
+    },
+    {
+      "id": "keywords",
+      "label": "Keywords to mirror",
+      "hint": "Exact phrases worth echoing in the application"
+    }
+  ],
+  "exportColumns": [
+    "name",
+    "decision",
+    "criterion",
+    "reason",
+    "confidence",
+    "met",
+    "gaps",
+    "keywords",
+    "overridden"
+  ],
+  "sampleCopy": "A synthetic job description scored against a synthetic CV.",
+  "flowCounts": false
+}

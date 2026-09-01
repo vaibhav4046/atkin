@@ -1,0 +1,112 @@
+{
+  "components": [
+    {
+      "id": "webhook_1",
+      "provider": "webhook",
+      "name": "Screening request in",
+      "description": "Carries one document plus the criteria it is being screened against. The document text is somebody else's writing, so everything after this node treats it as data.",
+      "config": {
+        "hideForm": true,
+        "mode": "Source",
+        "parameters": {},
+        "type": "webhook"
+      }
+    },
+    {
+      "id": "guard_in",
+      "provider": "guardrails",
+      "name": "guard_in",
+      "description": "Second line of defence. The prompt already fences the document behind a per-call random marker, but a paper in somebody's download folder can say anything, so injection is also blocked here before the model reads it.",
+      "config": {
+        "profile": "custom",
+        "custom": {
+          "policy_mode": "block",
+          "enable_prompt_injection": true,
+          "enable_content_safety": true,
+          "enable_pii_detection": false,
+          "enable_hallucination_check": false,
+          "max_input_length": 32000,
+          "max_tokens_estimate": 0,
+          "expected_format": "",
+          "blocked_topics": [],
+          "allowed_topics": []
+        },
+        "parameters": {}
+      },
+      "input": [
+        {
+          "lane": "questions",
+          "from": "webhook_1"
+        }
+      ]
+    },
+    {
+      "id": "llm_1",
+      "provider": "llm_openai",
+      "name": "Screener (hosted)",
+      "description": "Same graph, hosted model. The key is supplied by the platform rather than written here.",
+      "config": {
+        "profile": "openai-4o-mini",
+        "openai-4o-mini": {
+          "apikey": "${ROCKETRIDE_OPENAI_APIKEY}"
+        },
+        "parameters": {}
+      },
+      "input": [
+        {
+          "lane": "questions",
+          "from": "guard_in"
+        }
+      ]
+    },
+    {
+      "id": "guard_out",
+      "provider": "guardrails",
+      "name": "guard_out",
+      "description": "The reply has to be JSON. Anything else is caught here and repaired once by the app before it becomes a decision.",
+      "config": {
+        "profile": "custom",
+        "custom": {
+          "policy_mode": "warn",
+          "enable_prompt_injection": false,
+          "enable_content_safety": true,
+          "enable_pii_detection": false,
+          "enable_hallucination_check": true,
+          "max_input_length": 0,
+          "max_tokens_estimate": 0,
+          "expected_format": "json",
+          "blocked_topics": [],
+          "allowed_topics": []
+        },
+        "parameters": {}
+      },
+      "input": [
+        {
+          "lane": "answers",
+          "from": "llm_1"
+        }
+      ]
+    },
+    {
+      "id": "response_1",
+      "provider": "response_answers",
+      "name": "Decision out",
+      "config": {
+        "laneName": "answers"
+      },
+      "input": [
+        {
+          "lane": "answers",
+          "from": "guard_out"
+        }
+      ]
+    }
+  ],
+  "project_id": "b52d9f31-08ae-4d76-83c1-6ff4a2e17b40",
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 1
+  },
+  "version": 1
+}

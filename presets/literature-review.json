@@ -1,0 +1,75 @@
+{
+  "id": "literature-review",
+  "name": "Literature review",
+  "icon": "papers",
+  "tagline": "Screen papers against your inclusion criteria, with a quote for every call.",
+  "decisionQuestion": "Should this paper be included in my literature review?",
+  "decisionLabels": {
+    "include": "Include",
+    "exclude": "Exclude",
+    "maybe": "Needs your call"
+  },
+  "criteriaTemplate": [
+    {
+      "id": "population",
+      "label": "Population",
+      "value": "Adults aged 18 and over. Exclude paediatric-only samples."
+    },
+    {
+      "id": "study-type",
+      "label": "Study type",
+      "value": "Peer-reviewed empirical studies. Exclude editorials, commentary, conference abstracts, and protocols."
+    },
+    {
+      "id": "date-range",
+      "label": "Date range",
+      "value": "Published 2015 to 2026."
+    },
+    {
+      "id": "language",
+      "label": "Language",
+      "value": "English full text available."
+    },
+    {
+      "id": "outcome",
+      "label": "Outcome reported",
+      "value": "Reports at least one quantitative outcome relevant to the review question."
+    }
+  ],
+  "extractionFields": [
+    {
+      "id": "method",
+      "label": "Method",
+      "hint": "Design, e.g. RCT, cohort, cross-sectional"
+    },
+    {
+      "id": "sample",
+      "label": "Sample",
+      "hint": "N and population"
+    },
+    {
+      "id": "findings",
+      "label": "Key findings",
+      "hint": "Primary result in one sentence"
+    },
+    {
+      "id": "limitations",
+      "label": "Limitations",
+      "hint": "As stated by the authors"
+    }
+  ],
+  "exportColumns": [
+    "name",
+    "decision",
+    "criterion",
+    "reason",
+    "confidence",
+    "method",
+    "sample",
+    "findings",
+    "limitations",
+    "overridden"
+  ],
+  "sampleCopy": "Ten synthetic abstracts screened against a public health inclusion list.",
+  "flowCounts": true
+}

@@ -1,0 +1,76 @@
+{
+  "id": "receipts",
+  "name": "Receipts",
+  "icon": "receipt",
+  "tagline": "Categorise receipts and invoices against your expense policy.",
+  "decisionQuestion": "Which expense category does this receipt belong to, and is it reimbursable?",
+  "decisionLabels": {
+    "include": "Reimbursable",
+    "exclude": "Not reimbursable",
+    "maybe": "Needs your call"
+  },
+  "criteriaTemplate": [
+    {
+      "id": "policy-travel",
+      "label": "Travel",
+      "value": "Standard class rail and economy air are reimbursable. First class is not."
+    },
+    {
+      "id": "policy-meals",
+      "label": "Meals",
+      "value": "Meals up to 30 pounds per day while travelling on business."
+    },
+    {
+      "id": "policy-alcohol",
+      "label": "Alcohol",
+      "value": "Alcohol is never reimbursable, even within a meal total."
+    },
+    {
+      "id": "policy-evidence",
+      "label": "Evidence",
+      "value": "A dated itemised receipt showing the vendor and total is required."
+    }
+  ],
+  "extractionFields": [
+    {
+      "id": "vendor",
+      "label": "Vendor",
+      "hint": "Trading name on the receipt"
+    },
+    {
+      "id": "date",
+      "label": "Date",
+      "hint": "ISO format where legible"
+    },
+    {
+      "id": "amount",
+      "label": "Amount",
+      "hint": "Total including tax"
+    },
+    {
+      "id": "currency",
+      "label": "Currency",
+      "hint": "ISO code"
+    },
+    {
+      "id": "category",
+      "label": "Category",
+      "hint": "Travel, meals, equipment, other"
+    }
+  ],
+  "exportColumns": [
+    "name",
+    "decision",
+    "criterion",
+    "reason",
+    "confidence",
+    "vendor",
+    "date",
+    "amount",
+    "currency",
+    "category",
+    "overridden"
+  ],
+  "sampleCopy": "A synthetic receipt checked against a small expense policy.",
+  "flowCounts": false
+}

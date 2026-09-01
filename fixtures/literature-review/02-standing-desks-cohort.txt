@@ -1,0 +1,14 @@
+Height-adjustable workstations and sedentary behaviour: a two-year prospective cohort
+
+International Review of Occupational Health, 2019, volume 33, pages 88 to 101.
+
+Abstract
+Objective. To examine change in sedentary behaviour among office workers following an organisation-wide rollout of height-adjustable workstations.
+Design. Prospective cohort study with measurements at baseline, 12 months and 24 months.
+Participants. 612 adult office workers, mean age 38.4 years, drawn from four employers in the financial services sector.
+Measures. Sedentary time was captured using thigh-worn inclinometers worn for seven consecutive days at each wave.
+Results. Mean daily workplace sitting time decreased from 6.4 hours at baseline to 5.5 hours at 24 months, a difference of 54 minutes per day.
+Conclusion. Provision of height-adjustable workstations was associated with a modest but durable reduction in workplace sedentary time across two years.
+Limitations. Participation was voluntary and the cohort was drawn from a single industry sector, so healthier-than-average uptake cannot be excluded.
+
+This is a synthetic document created for the Atkin worked example. It describes no real study.

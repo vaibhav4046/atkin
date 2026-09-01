@@ -1,0 +1,12 @@
+Reducing occupational sitting time in desk-based employees: a randomised controlled trial
+
+Journal of Workplace Health Research, 2021, volume 14, pages 220 to 234.
+
+Abstract
+Background. Prolonged occupational sitting is associated with adverse cardiometabolic outcomes, yet few workplace interventions have been evaluated under randomised conditions.
+Methods. We randomised 248 desk-based employees aged 24 to 61 years across six office sites to either a multi-component sit-less intervention or usual practice. The intervention combined height-adjustable workstations, a brief motivational session, and fortnightly manager prompts over 12 weeks.
+Results. Objectively measured sitting time fell by 51.2 minutes per 8-hour workday in the intervention arm relative to control, 95 percent confidence interval 34.1 to 68.3. Self-reported musculoskeletal discomfort also decreased.
+Conclusions. A multi-component workplace intervention produced a moderate and sustained reduction in occupational sitting time over 12 weeks.
+Limitations. The trial was not blinded, sites were drawn from a single metropolitan region, and follow-up ended at 12 weeks so maintenance is unknown.
+
+This is a synthetic document created for the Atkin worked example. It describes no real study.

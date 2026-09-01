@@ -1,0 +1,10 @@
+Reducing sedentary time among hospital administrative staff: a study protocol for a stepped-wedge trial
+
+Trials in Occupational Health, 2023, volume 12, article 77.
+
+Abstract
+Background. Hospital administrative staff spend the majority of their shift seated.
+Methods and design. This paper describes the protocol for a stepped-wedge cluster randomised trial across nine hospital departments. Recruitment of approximately 400 adult staff will begin in early 2024. The primary outcome will be device-measured sitting time at six months.
+Discussion. This protocol describes the planned methods only. No results are reported here, as data collection has not yet begun.
+
+This is a synthetic document created for the Atkin worked example. It describes no real study.

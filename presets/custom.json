@@ -1,0 +1,36 @@
+{
+  "id": "custom",
+  "name": "Custom",
+  "icon": "sliders",
+  "tagline": "Write your own decision question, criteria, and fields.",
+  "decisionQuestion": "",
+  "decisionLabels": {
+    "include": "Include",
+    "exclude": "Exclude",
+    "maybe": "Needs your call"
+  },
+  "criteriaTemplate": [
+    {
+      "id": "c1",
+      "label": "Criterion 1",
+      "value": ""
+    }
+  ],
+  "extractionFields": [
+    {
+      "id": "f1",
+      "label": "Field 1",
+      "hint": "What to pull out of each document"
+    }
+  ],
+  "exportColumns": [
+    "name",
+    "decision",
+    "criterion",
+    "reason",
+    "confidence",
+    "overridden"
+  ],
+  "sampleCopy": "Bring your own documents and rules.",
+  "flowCounts": false
+}
