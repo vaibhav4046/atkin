@@ -47,8 +47,24 @@ No account. No key. No card. Works with the network unplugged.
   response_answers`. Built against the engine's own live `/services` catalog, and
   `pnpm check:live` posts one to a running engine and asserts it is accepted and
   issued a task token. That check passes.
-- **30 checks**, offline, in `scripts/check.ts`. All passing.
+- **49 checks**, offline, in `scripts/check.ts`. All passing.
 - **The four presets** are JSON config over one engine, not four codebases.
+
+## Proved against a real model, not a mock
+
+The prepared answers demonstrate the interface. They do not prove the engine, so
+the fixture corpus was also run through a real local model, `qwen3:4b-instruct`
+on Ollama, with `pnpm tsx scripts/live-run.ts`.
+
+**Four of ten decisions came back quoting text that is not in the document, and
+all four were refused.** One of them invented "12 primary schools" and "aged 6 to
+12" for a paper that says twenty-two classes and 486 children aged 9 to 11: zero
+of seventeen words present in the source. Plausible, fluent, and entirely made
+up. That is the failure this product exists to catch, caught on the first real
+run, unstaged.
+
+It also cost nothing. Ollama runs on the machine, so the measurement drew no
+platform tokens.
 
 ## What is not real, stated plainly
 

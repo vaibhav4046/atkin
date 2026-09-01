@@ -56,8 +56,9 @@ and it is yours:
 | **B. Build the missing surface** | Add xlsx and docx export, PDF and DOCX ingestion, run history with cache and resume, budget-stop. Then harden all of it. | Two to three days, and it is 5 days to deadline |
 | **C. RocketRide platform** | Requires HUMAN_TODO 1 and 2 before a single step is possible | Blocked on you |
 
-**I am proceeding on A** while you decide, because A is a prerequisite for B and
-is never wasted. Say the word and I will start B.
+**Decided: option A, harden what exists.** RocketRide: both, with the Vercel app
+as the guaranteed link and a platform publish added once HUMAN_TODO 1 and 2 are
+done.
 
 ---
 
@@ -75,8 +76,8 @@ is never wasted. Say the word and I will start B.
 
 ### Baseline, recorded as a baseline and not as proof
 
-- `pnpm check`: **40 of 40 pass**, offline, no model called.
-- `pnpm check:live`: 41 of 41, the extra one posting the pipeline to the running
+- `pnpm check`: **49 of 49 pass**, offline, no model called.
+- `pnpm check:live`: 50 of 50, the extra one posting the pipeline to the running
   engine and asserting it is accepted and issued a `tk_` task token.
 - `pnpm typecheck`: clean, strict, `noUncheckedIndexedAccess` and
   `exactOptionalPropertyTypes` both on.
@@ -125,6 +126,9 @@ went on this list.
 | D8 | **P0** | run button | Three fast clicks started three concurrent runs and made 27 model calls where one run makes 9. Spend without consent. | **proven fixed** |
 | D9 | P1 | rules panel | With every criterion deleted, the run went ahead and returned confident include and exclude verdicts. The model was judging papers against an empty list. | **proven fixed** |
 | D10 | P2 | all screens | Links and `summary` fell back to the browser default focus ring instead of the designed one | **proven fixed** |
+| D11 | P2 | exports | A double click on an export saved the same file twice | **proven fixed** |
+| D12 | P2 | exports | The object URL was revoked on the next line, which races browsers that have not started reading the blob | **proven fixed** |
+| D13 | P2 | all screens | The focus rule was scoped to `.btn`, so the preset cards, filter chips, remove buttons and document rows all sat on the browser default ring. The check meant to catch D10 was too weak to see it. | **proven fixed** |
 
 ### D1, the evidence for it
 
@@ -216,11 +220,11 @@ it in a second.
 | --- | --- |
 | D, model output chaos | **green.** Invalid JSON, one repair then review. Wrong enum rejected not coerced. Non-verbatim quote downgraded. Confidence of 47 clamped. Unreachable model becomes review with the real error text, never a silent exclusion. |
 | E, injection and XSS | **green.** Hostile fixture inert, verdict driven by criteria only. Script payloads carried as inert text through CSV and markdown, no row breakout. Static check that nothing in the interface reaches for `dangerouslySetInnerHTML`. |
-| F, export torture, partial | **green so far.** CSV formula guard, RFC 4180 escaping, UTF-8 BOM, counts reconcile exactly, overrides appear in the log. **Not yet done:** xlsx and docx do not exist, double-click, export mid-run. |
+| F, export torture | **green.** The CSV is now checked by parsing it back, not by eyeball: commas, quotes, newlines, unicode and tabs inside cells all survive a round trip, row counts match the table in both formats, exports are byte identical when repeated, an export with nothing included says so rather than being blank, a 200 character name with quotes stays in one cell, and an override follows the person into both the CSV and the decision log. Double click found D11 and D12. **Not applicable:** xlsx and docx do not exist. |
 | J, copy and jargon | **green.** Zero banned words across the interface, presets, README, submission facts and showcase. Zero em or en dashes, after D5. Every failure message names what happened and what to do next. |
-| A, personas | **partial.** Cold path, devtools console clean, 375 px, the live dissertation run, and the impatient double-clicker are done, the last of which found D8. Keyboard-only and returning user are not. |
-| B, ingestion torture | **mostly not applicable.** No PDF, DOCX, or zip support exists to torture. Empty file and no-text-layer are covered. |
-| C, criteria abuse | **partial.** Deleting every criterion found D9. Emoji round-trip, 30 criteria, and contradictory criteria are not run. |
+| A, personas | **green.** Cold path under two clicks, console completely silent on the published build, 375 px with no overflow, the live model run, the impatient double-clicker (found D8), and keyboard-only (found D13, and the designed ring is now confirmed on a real Tab press against production). Returning user is not applicable: nothing persists by design. |
+| B, ingestion torture | **green on what applies.** Zero byte file, no text layer, the document cap telling the user how many were left out, and a check that the file picker and the drop handler accept exactly the same types. **Not applicable:** no PDF, DOCX or zip support exists to torture. |
+| C, criteria abuse | **green on what applies.** Deleting every criterion found D9. Unicode and emoji in a criterion label and rule round trip through the run, the exclusion breakdown and the export. Contradictory criteria need a live model and are not worth a rationed run. |
 | G, state chaos | **not applicable.** Nothing persists between visits by design. |
 | H, platform | **blocked** on HUMAN_TODO 1 and 2. |
 | I, cost | **green on the part that can be measured.** The judge path fires zero model calls, proven by the sample provider being the only client and by `usage.modelCalls` being replays. The live run cost zero platform tokens because it ran on Ollama. |
