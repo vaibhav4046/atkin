@@ -423,6 +423,32 @@ check('hostile input', 'a run cannot be started three times by an impatient clic
   return /running\.current = false/.test(app) ? null : 'the run guard is never released, so a second run can never start';
 });
 
+check('hostile input', 'a run with no rules at all is refused', async () => {
+  // Measured in a browser: with every criterion deleted the run went ahead and
+  // produced confident include and exclude verdicts. The model was being asked to
+  // judge a paper against an empty list. A user who cleared the rules to start
+  // again would have got a full screen built on nothing.
+  const app = readFileSync(join(ROOT, 'src', 'App.tsx'), 'utf8');
+  if (!/criteria\.every\(\(c\) => c\.value\.trim\(\)\.length === 0\)/.test(app)) {
+    return 'nothing checks for an empty set of criteria';
+  }
+  if (!/disabled=\{docs\.length === 0 \|\| blocker !== null/.test(app)) return 'the run button does not respect the blocker';
+  return /if \(running\.current \|\| docs\.length === 0 \|\| blocker !== null\) return;/.test(app)
+    ? null
+    : 'the run function itself does not respect the blocker';
+});
+
+check('the words', 'every interactive control gets the designed focus ring', async () => {
+  const css = readFileSync(join(ROOT, 'src', 'styles.css'), 'utf8');
+  const rule = /((?:[^{}]*:focus-visible,?\s*)+)\{[^}]*outline:/.exec(css);
+  if (rule === null) return 'no focus-visible rule found';
+  const covered = rule[1] ?? '';
+  const missing = ['a:focus-visible', 'input:focus-visible', 'select:focus-visible', 'textarea:focus-visible', 'summary:focus-visible', '.btn:focus-visible'].filter(
+    (sel) => !covered.includes(sel),
+  );
+  return missing.length === 0 ? null : 'these fall back to the browser default ring: ' + missing.join(', ');
+});
+
 check('the words', 'no marketing jargon anywhere a user can read', async () => {
   const hits: string[] = [];
   for (const { where, text } of userFacingText()) {

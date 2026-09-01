@@ -234,6 +234,8 @@ main {
   cursor: not-allowed;
 }
 .btn:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,

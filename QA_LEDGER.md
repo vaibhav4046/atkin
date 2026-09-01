@@ -75,8 +75,8 @@ is never wasted. Say the word and I will start B.
 
 ### Baseline, recorded as a baseline and not as proof
 
-- `pnpm check`: **37 of 37 pass**, offline, no model called.
-- `pnpm check:live`: 38 of 38, the extra one posting the pipeline to the running
+- `pnpm check`: **40 of 40 pass**, offline, no model called.
+- `pnpm check:live`: 41 of 41, the extra one posting the pipeline to the running
   engine and asserting it is accepted and issued a `tk_` task token.
 - `pnpm typecheck`: clean, strict, `noUncheckedIndexedAccess` and
   `exactOptionalPropertyTypes` both on.
@@ -123,6 +123,8 @@ went on this list.
 | D6 | P1 | engine | The quote check proves a sentence exists, not that it supports the decision. Seen live: a 2009 paper was included with a genuine verified quote, because the model misread the date criterion. | **open, documented limitation** |
 | D7 | P3 | engine | Two runs of the same corpus at `temperature: 0` gave different verdicts. A model property, not an Atkin defect. | **waived**, noted |
 | D8 | **P0** | run button | Three fast clicks started three concurrent runs and made 27 model calls where one run makes 9. Spend without consent. | **proven fixed** |
+| D9 | P1 | rules panel | With every criterion deleted, the run went ahead and returned confident include and exclude verdicts. The model was judging papers against an empty list. | **proven fixed** |
+| D10 | P2 | all screens | Links and `summary` fell back to the browser default focus ring instead of the designed one | **proven fixed** |
 
 ### D1, the evidence for it
 
@@ -218,7 +220,7 @@ it in a second.
 | J, copy and jargon | **green.** Zero banned words across the interface, presets, README, submission facts and showcase. Zero em or en dashes, after D5. Every failure message names what happened and what to do next. |
 | A, personas | **partial.** Cold path, devtools console clean, 375 px, the live dissertation run, and the impatient double-clicker are done, the last of which found D8. Keyboard-only and returning user are not. |
 | B, ingestion torture | **mostly not applicable.** No PDF, DOCX, or zip support exists to torture. Empty file and no-text-layer are covered. |
-| C, criteria abuse | **not run.** |
+| C, criteria abuse | **partial.** Deleting every criterion found D9. Emoji round-trip, 30 criteria, and contradictory criteria are not run. |
 | G, state chaos | **not applicable.** Nothing persists between visits by design. |
 | H, platform | **blocked** on HUMAN_TODO 1 and 2. |
 | I, cost | **green on the part that can be measured.** The judge path fires zero model calls, proven by the sample provider being the only client and by `usage.modelCalls` being replays. The live run cost zero platform tokens because it ran on Ollama. |

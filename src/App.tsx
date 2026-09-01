@@ -165,8 +165,23 @@ export default function App() {
     };
   }, [source, docs, preset]);
 
+  /**
+   * Everything standing between the user and a run.
+   *
+   * Screening against zero criteria is the one that matters. Nothing stopped it:
+   * the run went ahead, the model was asked to judge a paper against an empty
+   * list, and it returned confident verdicts anyway. A user who clears the rules
+   * to start fresh would have got a full green screen built on nothing.
+   */
+  const blocker = useMemo((): string | null => {
+    if (criteria.every((c) => c.value.trim().length === 0)) {
+      return 'Atkin has no rules to screen against. Write at least one criterion, or pick a preset to start from.';
+    }
+    return client.problem;
+  }, [criteria, client]);
+
   const run = useCallback(async () => {
-    if (running.current || docs.length === 0 || client.problem !== null) return;
+    if (running.current || docs.length === 0 || blocker !== null) return;
     running.current = true;
     const controller = new AbortController();
     abort.current = controller;
@@ -192,7 +207,7 @@ export default function App() {
       setProgress(null);
       abort.current = null;
     }
-  }, [docs, client, preset, criteria]);
+  }, [docs, client, blocker, preset, criteria]);
 
   const rows = useMemo((): Row[] => {
     if (result === null) return [];
@@ -487,14 +502,14 @@ export default function App() {
                   {error}
                 </div>
               )}
-              {client.problem !== null && docs.length > 0 && (
+              {blocker !== null && docs.length > 0 && (
                 <div className="warnbox" style={{ marginTop: '0.9rem' }}>
-                  {client.problem}
+                  {blocker}
                 </div>
               )}
 
               <div className="toolbar" style={{ marginTop: '1.1rem', paddingBottom: 0, borderBottom: 0 }}>
-                <button className="btn primary big" disabled={docs.length === 0 || client.problem !== null || progress !== null} onClick={() => void run()}>
+                <button className="btn primary big" disabled={docs.length === 0 || blocker !== null || progress !== null} onClick={() => void run()}>
                   {progress !== null ? 'Reading…' : 'Screen ' + (docs.length || '') + ' document' + (docs.length === 1 ? '' : 's')}
                 </button>
                 {progress !== null && (
