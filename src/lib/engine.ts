@@ -25,7 +25,7 @@ import type {
   Screening,
 } from './types';
 import { buildExtractPrompt, buildRepairPrompt, buildScreenPrompt } from './prompt';
-import { findQuote, normalizeWithMap } from './verify';
+import { findQuote, normalize, normalizeWithMap, MIN_QUOTE_CHARS } from './verify';
 import type { ParseResult } from './validate';
 import { parseExtractPayload, parseScreenPayload } from './validate';
 
@@ -159,6 +159,28 @@ function checkQuote(quote: string, docText: string): Evidence {
     : { quote, verified: true, start: hit.start, end: hit.end };
 }
 
+/**
+ * Say which way the evidence failed.
+ *
+ * These are two different problems and a user can act on exactly one of them. A
+ * quote that is not in the document means the model invented it. A quote of one
+ * word means the model did not answer the question. Reporting the second as the
+ * first is a lie the user cannot check: a real local model returned the single
+ * word "Abstract", which does appear in the paper, and the old message insisted
+ * it did not.
+ */
+function evidenceProblem(quote: string): string {
+  const trimmed = normalize(quote).trim();
+  if (trimmed.length < MIN_QUOTE_CHARS) {
+    return (
+      'The model gave ' +
+      (trimmed.length === 0 ? 'no quotation at all' : `only ${trimmed.length} characters, ${JSON.stringify(quote.slice(0, 40))}`) +
+      ', which is too little to check against the document. Screen this one yourself, or try a larger model.'
+    );
+  }
+  return 'The sentence quoted as evidence does not appear in this document, so the decision behind it cannot be trusted.';
+}
+
 const emptyScreening = (docId: string, note: string, ms: number): Screening => ({
   docId,
   verdict: 'review',
@@ -214,7 +236,7 @@ export async function screenDoc(
       reason: payload.reason,
       evidence,
       confidence: payload.confidence,
-      note: 'The sentence quoted as evidence does not appear in this document, so the decision behind it cannot be trusted.',
+      note: evidenceProblem(payload.quote),
       producedBy: client.kind,
       ms: asked.ms,
     };

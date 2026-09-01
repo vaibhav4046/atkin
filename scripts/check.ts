@@ -20,7 +20,7 @@ import { LIMITS, runScreening, screeningExcerpt } from '../src/lib/engine';
 import { buildScreenPrompt } from '../src/lib/prompt';
 import { findQuote, normalizeWithMap } from '../src/lib/verify';
 import { parseScreenPayload, extractJsonBlock } from '../src/lib/validate';
-import { computeFlow, toCsv, toDecisionLog } from '../src/lib/export';
+import { computeFlow, toCsv, toDecisionLog, toMarkdown } from '../src/lib/export';
 import { sampleClient } from '../src/lib/providers';
 import type { Criterion, Doc, Preset, Row, Verdict } from '../src/lib/types';
 
@@ -141,6 +141,37 @@ check('model output', 'a fabricated quote sends the decision to review', async (
     SAMPLE_DOC,
   );
   return expect(s.verdict, 'review', 'verdict') ?? (s.note === null ? 'no note explaining why' : null);
+});
+
+check('model output', 'a one-word quote is reported as too short, not as missing', async () => {
+  // Observed for real: qwen3:4b-instruct answered with the single word "Abstract".
+  // That word IS in the paper, so saying "does not appear in this document" was a
+  // claim the user could check and find false.
+  const s = await screenOne(
+    stubClient(() =>
+      JSON.stringify({ decision: 'include', criterionId: 'population', reason: 'Adults.', quote: 'Abstract', confidence: 0.5 }),
+    ),
+    SAMPLE_DOC,
+  );
+  if (s.verdict !== 'review') return 'verdict: got ' + s.verdict + ', wanted review';
+  if (s.note?.includes('too little to check') !== true) return 'the note did not say the quote was too short: ' + s.note;
+  return s.note.includes('does not appear') ? 'the note wrongly claims the word is absent' : null;
+});
+
+check('model output', 'an absent quote is still reported as absent', async () => {
+  const s = await screenOne(
+    stubClient(() =>
+      JSON.stringify({
+        decision: 'exclude',
+        criterionId: 'population',
+        reason: 'Children.',
+        quote: 'A randomized controlled trial was conducted in 12 primary schools involving children aged 6 to 12.',
+        confidence: 0.9,
+      }),
+    ),
+    SAMPLE_DOC,
+  );
+  return s.note?.includes('does not appear in this document') === true ? null : 'wrong note: ' + s.note;
 });
 
 check('model output', 'prose wrapped around valid JSON is still usable', async () => {
@@ -294,6 +325,117 @@ check('hostile input', 'the screening excerpt stays inside its character cap', a
   const huge = 'Abstract\n' + 'word '.repeat(200_000);
   const excerpt = screeningExcerpt(huge);
   return excerpt.length <= LIMITS.screenChars ? null : `excerpt was ${excerpt.length} characters`;
+});
+
+check('hostile input', 'script payloads survive as inert text through every export', async () => {
+  const payloads = ['<script>alert(1)</script>', '<img src=x onerror=alert(1)>', '"><svg onload=alert(1)>'];
+  const rows: Row[] = payloads.map((p, i) => ({
+    doc: docFrom(p + '.txt', 'Body containing ' + p + ' inline.'),
+    screening: {
+      docId: 'x' + i,
+      verdict: 'include',
+      criterionId: null,
+      reason: 'Reason mentioning ' + p,
+      evidence: { quote: p, verified: false, start: null, end: null },
+      confidence: null,
+      note: null,
+      producedBy: 'model',
+      ms: 1,
+    },
+    extraction: null,
+    override: null,
+    finalVerdict: 'include',
+  }));
+
+  // The exports are text formats, so the requirement is not that the payload is
+  // stripped, it is that it stays data: a CSV cell that cannot start a formula,
+  // and a markdown table that cannot break out of its own row.
+  const csv = toCsv(rows, preset, criteria);
+  const md = toMarkdown(rows, preset, criteria);
+
+  for (const p of payloads) {
+    if (!csv.includes(p.replace(/"/g, '""')) && !csv.includes(p)) return 'a payload vanished from the CSV rather than being carried as text';
+  }
+  const rowLines = md.trim().split('\n').slice(2);
+  if (rowLines.length !== payloads.length) return `markdown produced ${rowLines.length} rows for ${payloads.length} documents`;
+  if (rowLines.some((l) => !l.startsWith('|') || !l.endsWith('|'))) return 'a payload broke out of its markdown row';
+  return null;
+});
+
+check('hostile input', 'the interface never hands raw markup to the DOM', async () => {
+  // React escapes everything it renders, which only holds while nobody reaches
+  // for the one prop that turns that off. This is the check that nobody has.
+  const files = ['src/App.tsx', 'src/main.tsx', 'src/ui/DocRow.tsx'];
+  const offenders = files.filter((f) => /dangerouslySetInnerHTML|innerHTML\s*=/.test(readFileSync(join(ROOT, f), 'utf8')));
+  return offenders.length === 0 ? null : 'raw markup injection in ' + offenders.join(', ');
+});
+
+// ---------------------------------------------------------------- the words
+
+const BANNED = [
+  'leverage',
+  'seamless',
+  'empower',
+  'revolutionize',
+  'revolutionise',
+  'cutting-edge',
+  'unleash',
+  'supercharge',
+  'next-generation',
+  'synergy',
+  'robust',
+  'delve',
+  'AI-powered',
+  'lorem ipsum',
+];
+
+function userFacingText(): { where: string; text: string }[] {
+  const out: { where: string; text: string }[] = [];
+  for (const f of [
+    'src/App.tsx',
+    'src/ui/DocRow.tsx',
+    'src/lib/engine.ts',
+    'src/lib/export.ts',
+    'index.html',
+    'README.md',
+    'SUBMISSION_FACTS.md',
+    'SHOWCASE.md',
+  ]) {
+    out.push({ where: f, text: readFileSync(join(ROOT, f), 'utf8') });
+  }
+  for (const p of readdirSync(join(ROOT, 'presets'))) {
+    out.push({ where: 'presets/' + p, text: readFileSync(join(ROOT, 'presets', p), 'utf8') });
+  }
+  return out;
+}
+
+check('the words', 'no marketing jargon anywhere a user can read', async () => {
+  const hits: string[] = [];
+  for (const { where, text } of userFacingText()) {
+    for (const word of BANNED) {
+      if (new RegExp('\\b' + word.replace(/[-]/g, '[-]') + '\\b', 'i').test(text)) hits.push(`${where}: ${word}`);
+    }
+  }
+  return hits.length === 0 ? null : hits.join(', ');
+});
+
+check('the words', 'no em dashes or en dashes in anything shipped', async () => {
+  // They do not survive a paste into Word, and half the point of this tool is a
+  // table somebody pastes into a chapter.
+  const hits = userFacingText()
+    .filter(({ text }) => /[—–]/.test(text))
+    .map(({ where }) => where);
+  return hits.length === 0 ? null : 'dash characters in ' + hits.join(', ');
+});
+
+check('the words', 'every message about a failure says what to do next', async () => {
+  const text = readFileSync(join(ROOT, 'src', 'lib', 'engine.ts'), 'utf8');
+  const messages = [
+    'There was almost no readable text in this file. If it is a scan, it needs running through OCR first.',
+    'too little to check against the document. Screen this one yourself, or try a larger model.',
+  ];
+  const missing = messages.filter((m) => !text.includes(m));
+  return missing.length === 0 ? null : 'a failure message lost its next step: ' + missing.join(' / ');
 });
 
 // ---------------------------------------------------------------- the corpus
