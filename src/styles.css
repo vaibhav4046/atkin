@@ -233,7 +233,15 @@ main {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.btn:focus-visible,
+/*
+ * Every focusable thing, not just the ones wearing .btn.
+ *
+ * The preset cards, the filter chips, the remove buttons and the document rows
+ * are all real buttons with their own classes, so a rule scoped to .btn left
+ * them on the browser default ring. `button` covers all of them at once and
+ * cannot fall behind when another class is added.
+ */
+button:focus-visible,
 a:focus-visible,
 [tabindex]:focus-visible,
 input:focus-visible,

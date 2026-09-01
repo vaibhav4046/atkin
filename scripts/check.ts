@@ -609,10 +609,18 @@ check('the words', 'every interactive control gets the designed focus ring', asy
   const rule = /((?:[^{}]*:focus-visible,?\s*)+)\{[^}]*outline:/.exec(css);
   if (rule === null) return 'no focus-visible rule found';
   const covered = rule[1] ?? '';
-  const missing = ['a:focus-visible', 'input:focus-visible', 'select:focus-visible', 'textarea:focus-visible', 'summary:focus-visible', '.btn:focus-visible'].filter(
+  // `button`, not `.btn`. Scoping to one class left the preset cards, the filter
+  // chips, the remove buttons and the document rows on the browser default ring,
+  // which a real Tab press through the deployed page found.
+  const missing = ['button:focus-visible', 'a:focus-visible', 'input:focus-visible', 'select:focus-visible', 'textarea:focus-visible', 'summary:focus-visible'].filter(
     (sel) => !covered.includes(sel),
   );
-  return missing.length === 0 ? null : 'these fall back to the browser default ring: ' + missing.join(', ');
+  if (missing.length > 0) return 'these fall back to the browser default ring: ' + missing.join(', ');
+
+  // Every class that decorates a real button must inherit that ring rather than
+  // quietly opting out with its own outline rule.
+  const optOut = /\.(preset|chip|icon-btn|row)[^{}]*:focus-visible[^{}]*\{[^}]*outline:\s*(none|0)/.exec(css);
+  return optOut === null ? null : 'a control turns its focus ring off: ' + optOut[1];
 });
 
 check('the words', 'no marketing jargon anywhere a user can read', async () => {
