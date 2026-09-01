@@ -20,7 +20,7 @@ import { LIMITS, runScreening, screeningExcerpt } from '../src/lib/engine';
 import { buildScreenPrompt } from '../src/lib/prompt';
 import { findQuote, normalizeWithMap } from '../src/lib/verify';
 import { parseScreenPayload, extractJsonBlock } from '../src/lib/validate';
-import { computeFlow, toCsv } from '../src/lib/export';
+import { computeFlow, toCsv, toDecisionLog } from '../src/lib/export';
 import { sampleClient } from '../src/lib/providers';
 import type { Criterion, Doc, Preset, Row, Verdict } from '../src/lib/types';
 
@@ -422,6 +422,40 @@ check('worked example', 'the counts add up and name the reasons for exclusion', 
   if (total !== flow.identified) return `counts do not add up: ${total} of ${flow.identified}`;
   const attributed = flow.excludedByCriterion.reduce((n, c) => n + c.count, 0);
   return attributed === flow.excluded ? null : `${flow.excluded} exclusions but ${attributed} attributed`;
+});
+
+check('worked example', 'the decision log states the counts and does not hide the failures', async () => {
+  const docs = loadDocs();
+  const result = await runScreening({
+    preset,
+    criteria,
+    docs,
+    client: sampleClient(answers),
+    extract: false,
+    onProgress: null,
+    signal: undefined,
+  });
+  const rows: Row[] = docs.flatMap((doc) => {
+    const screening = result.screenings.find((s) => s.docId === doc.id);
+    return screening === undefined ? [] : [{ doc, screening, extraction: null, override: null, finalVerdict: screening.verdict }];
+  });
+  const log = toDecisionLog(rows, preset, criteria, { startedAt: result.startedAt, producedBy: 'the worked example' });
+
+  // The log is what goes in an appendix, so it has to carry the criteria that
+  // were applied, the counts, and the documents nobody has looked at yet.
+  const missing = [
+    ['the question', preset.decisionQuestion],
+    ['a criterion', 'Adults aged 18 and over'],
+    ['the included count', '- Included: 2'],
+    ['the excluded count', '- Excluded: 6'],
+    ['the review count', '- Needing review: 1'],
+    ['exclusions by criterion', 'Population: 2'],
+    ['the outstanding section', 'Still needing a person'],
+    ['the unread file', '10-scanned-no-text-layer.txt'],
+  ].filter(([, needle]) => !log.includes(needle as string));
+
+  if (missing.length > 0) return 'the decision log omits ' + missing.map(([what]) => what).join(', ');
+  return /[—–]/.test(log) ? 'the log contains a dash character that will not survive a paste into Word' : null;
 });
 
 check('worked example', 'a human override wins over the machine decision', async () => {

@@ -5,7 +5,7 @@
 Screening, evidence extraction, and clean exports for anyone facing a stack of
 documents and a deadline.
 
-Live, no account, no key: **https://atkin.vercel.app**
+Live, no account, no key: **https://atkin-app.vercel.app**
 Click "Screen ten papers now". It takes about four seconds and works offline.
 
 ---

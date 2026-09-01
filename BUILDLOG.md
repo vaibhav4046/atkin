@@ -89,3 +89,83 @@ number to show is the Ollama one: zero platform tokens.
 Ground truth established from a live engine rather than the missing docs, and the
 five browser-gated items are in HUMAN_TODO. Token-budget risk removed by making the
 local model the default rather than a fallback.
+
+---
+
+## 2026-09-01 — Phases 1 to 9
+
+Built, checked, pushed and deployed. What follows is what actually happened,
+including the two things that were wrong and had to be fixed.
+
+### What shipped
+
+| | |
+| --- | --- |
+| Live | https://atkin-app.vercel.app |
+| Repository | https://github.com/vaibhav4046/atkin (public, MIT) |
+| Bundle | 195 kB raw, **63.4 kB gzip**, no runtime dependency but React |
+| Checks | **30 offline, 31 with the live engine.** All passing. |
+
+`atkin.vercel.app` was already taken by somebody else, so the canonical host is
+`atkin-app.vercel.app`, with `readthepile` and `atkin-desk` aliased to the same
+deployment. The SSO wall is off, verified by loading production in a clean tab.
+
+### The design decision the whole thing rests on
+
+Every screening call must return a verbatim quote, and the quote is searched for
+in the source document before the verdict is shown. No quote, no decision. Quote
+not found, no decision. The verdict becomes `review` with a note saying the
+evidence did not check out.
+
+This is the answer to the failure mode that makes AI screening useless for work
+you have to defend: a model asked to justify itself produces a quotation that
+reads perfectly and is not in the paper. A substring search is a dull, mechanical
+answer to it, and it cannot be talked out of.
+
+The matcher had to survive real documents rather than clean ones, so it folds
+PDF hyphenation across line breaks, curly quotes, en dashes, ligatures,
+non-breaking spaces, and quotes elided with an ellipsis, where each fragment must
+appear in order. An index map carries every folded character back to its original
+offset so the interface can highlight the real passage in place.
+
+### Two things were wrong, and both are now checks
+
+**The evidence for one exclusion was quoting the attack.** The prepared answer for
+`09-embedded-instruction.txt` cited a quote that ran on past its own sentence and
+swallowed the injection paragraph printed underneath it. It verified, because it
+was genuinely verbatim, and it was still wrong. Cause: the fixture generator
+looked for the literal `". "` as a sentence boundary, which misses a sentence
+ending at a line break and runs into the next paragraph. Fixed with a proper
+boundary regex, plus an assertion in the generator and two new cases in
+`scripts/check.ts`: no prepared quote may span a paragraph break, and the
+highlighted span may not be longer than the quote it marks.
+
+**The results panel contradicted itself.** It said "no model was called" and
+"11 calls" in the same sentence. On the worked example it now says "11 prepared
+answers replayed". Small, and exactly the kind of thing this product exists to
+refuse to do.
+
+### Verified, not assumed
+
+- Production loaded in a fresh browser tab, worked example run end to end:
+  2 include, 6 exclude, 1 borderline, 1 needing review, counts reconciling with
+  the per-criterion breakdown (population 2, study type 2, date range 1,
+  outcome 1).
+- The injection document is excluded on population, and the highlighted evidence
+  is the sentence about the children's ages, not the instruction paragraph.
+- The empty scan is flagged for OCR and consumed zero model calls.
+- `pnpm check:live` posted `atkin.ollama.pipe` to the running engine on
+  `localhost:5565`; it was accepted and issued a task token.
+- 375 px viewport, no horizontal overflow, both colour schemes legible.
+
+### Still not done, and why
+
+The RocketRide platform deploy is the one thing outstanding, and it is genuinely
+browser-gated: the extension has to be pointed at staging and signed in through an
+OAuth window. See HUMAN_TODO at the top. The pipelines themselves are proven
+against a real engine, so what remains is the sign-in and the publish rung, not
+the work.
+
+No user testing has happened. Nobody outside this machine has run it. Anything
+said about what users think would be invented, so `SUBMISSION_FACTS.md` says
+there is none.

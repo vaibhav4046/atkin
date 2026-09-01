@@ -5,3 +5,5 @@ dist/
 .DS_Store
 .atkin/
 .claude/
+
+.vercel
