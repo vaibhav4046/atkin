@@ -34,13 +34,28 @@ type Source =
 
 const uid = (): string => Math.random().toString(36).slice(2, 9);
 
+/**
+ * Hand the user a file.
+ *
+ * Two details that are easy to get wrong and annoying to debug. Revoking the
+ * object URL on the next line races the download in browsers that have not
+ * started reading the blob yet, so the revoke waits a beat. And a double click
+ * on an export button is one intention, not two, so a repeat inside a second is
+ * ignored rather than saving the same table twice with a (1) after it.
+ */
+let lastExport = { name: '', at: 0 };
+
 function download(name: string, body: string, mime: string): void {
+  const now = Date.now();
+  if (name === lastExport.name && now - lastExport.at < 1200) return;
+  lastExport = { name, at: now };
+
   const url = URL.createObjectURL(new Blob([body], { type: mime }));
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 const FILTERS: { id: Verdict | 'all'; label: string }[] = [

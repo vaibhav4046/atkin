@@ -370,6 +370,172 @@ check('hostile input', 'the interface never hands raw markup to the DOM', async 
   return offenders.length === 0 ? null : 'raw markup injection in ' + offenders.join(', ');
 });
 
+// ---------------------------------------------------------------- exports
+
+/** A minimal RFC 4180 reader, so the CSV is checked by parsing it, not by eyeball. */
+function parseCsv(text: string): string[][] {
+  const body = text.startsWith('﻿') ? text.slice(1) : text;
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i] as string;
+    if (quoted) {
+      if (ch === '"') {
+        if (body[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else quoted = false;
+      } else cell += ch;
+      continue;
+    }
+    if (ch === '"') quoted = true;
+    else if (ch === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\r') continue;
+    else if (ch === '\n') {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else cell += ch;
+  }
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function rowWith(name: string, reason: string, quote: string, verdict: Verdict = 'include'): Row {
+  return {
+    doc: docFrom(name, 'body'),
+    screening: {
+      docId: name,
+      verdict,
+      criterionId: 'population',
+      reason,
+      evidence: { quote, verified: true, start: 0, end: 1 },
+      confidence: 0.5,
+      note: null,
+      producedBy: 'model',
+      ms: 1,
+    },
+    extraction: null,
+    override: null,
+    finalVerdict: verdict,
+  };
+}
+
+const recordOf = (parsed: string[][]): Record<string, string> | null => {
+  const header = parsed[0];
+  const data = parsed[1];
+  if (header === undefined || data === undefined) return null;
+  const out: Record<string, string> = {};
+  header.forEach((h, i) => (out[h] = data[i] ?? ''));
+  return out;
+};
+
+check('exports', 'commas, quotes, newlines and unicode survive a round trip', async () => {
+  const nasty = rowWith(
+    'Unicode, "quoted", paper.txt',
+    'A reason with a comma, a "quotation", and a\nnewline in it.',
+    'Quote with an emoji and a semicolon; plus a tab\there.',
+  );
+  const parsed = parseCsv(toCsv([nasty], preset, criteria));
+  if (parsed.length !== 2) return 'expected a header and one row, parsed ' + parsed.length + ' lines';
+  const record = recordOf(parsed);
+  if (record === null) return 'the CSV did not parse';
+  if (record['name'] !== 'Unicode, "quoted", paper.txt') return 'the name came back as ' + JSON.stringify(record['name']);
+  if (record['reason']?.includes('\n') !== true) return 'the newline inside a cell was lost';
+  return record['quote']?.includes('tab\there') === true ? null : 'the tab inside a cell was lost';
+});
+
+check('exports', 'the row count always matches the table', async () => {
+  const rows = [rowWith('a.txt', 'r', 'q'), rowWith('b.txt', 'r', 'q', 'exclude'), rowWith('c.txt', 'r', 'q', 'review')];
+  const csvRows = parseCsv(toCsv(rows, preset, criteria)).length - 1;
+  const mdRows = toMarkdown(rows, preset, criteria).trim().split('\n').length - 2;
+  return csvRows === rows.length && mdRows === rows.length ? null : `csv ${csvRows}, markdown ${mdRows}, table ${rows.length}`;
+});
+
+check('exports', 'exporting twice gives exactly the same bytes', async () => {
+  const rows = [rowWith('a.txt', 'r', 'q')];
+  const meta = { startedAt: '2026-09-01T00:00:00Z', producedBy: 'x' };
+  return toCsv(rows, preset, criteria) === toCsv(rows, preset, criteria) &&
+    toDecisionLog(rows, preset, criteria, meta) === toDecisionLog(rows, preset, criteria, meta)
+    ? null
+    : 'two exports of the same rows differed';
+});
+
+check('exports', 'an export with nothing included is honest rather than empty', async () => {
+  const rows = [rowWith('a.txt', 'Fails the population rule.', 'q', 'exclude')];
+  const log = toDecisionLog(rows, preset, criteria, { startedAt: '2026-09-01T00:00:00Z', producedBy: 'x' });
+  if (!log.includes('- Included: 0')) return 'the log does not state that nothing was included';
+  return parseCsv(toCsv(rows, preset, criteria)).length === 2 ? null : 'the CSV lost the excluded row';
+});
+
+check('exports', 'a 200 character name with quotes stays inside one cell', async () => {
+  const name = '"study" ' + 'x'.repeat(200) + '.txt';
+  const parsed = parseCsv(toCsv([rowWith(name, 'r', 'q')], preset, criteria));
+  const record = recordOf(parsed);
+  if (record === null) return 'did not parse';
+  const header = parsed[0] as string[];
+  const data = parsed[1] as string[];
+  return data.length === header.length && record['name'] === name ? null : 'a long name broke the row shape';
+});
+
+check('exports', 'an overridden document says so, and the counts follow the person', async () => {
+  const base = rowWith('a.txt', 'The model excluded it.', 'q', 'exclude');
+  const overridden: Row = {
+    ...base,
+    override: { verdict: 'include', note: 'I read it, the sample is adults.', at: '2026-09-01T00:00:00Z' },
+    finalVerdict: 'include',
+  };
+  const record = recordOf(parseCsv(toCsv([overridden], preset, criteria)));
+  if (record === null) return 'did not parse';
+  if (record['overridden'] !== 'yes, by you') return 'the override is not marked in the export';
+  if (record['decision'] !== preset.decisionLabels.include) return 'the export shows the machine decision, not the human one';
+  const log = toDecisionLog([overridden], preset, criteria, { startedAt: '2026-09-01T00:00:00Z', producedBy: 'x' });
+  return log.includes('Changed by hand afterwards: 1') ? null : 'the decision log hides the override';
+});
+
+// ---------------------------------------------------------------- intake
+
+check('intake', 'a pile over the cap is capped, and the user is told', async () => {
+  const many: Doc[] = Array.from({ length: LIMITS.maxDocs + 5 }, (_, i) => docFrom('d' + i + '.txt', '[scan]'));
+  const result = await runScreening({
+    preset,
+    criteria,
+    docs: many,
+    client: stubClient(() => '{}'),
+    extract: false,
+    onProgress: null,
+    signal: undefined,
+  });
+  if (result.screenings.length !== LIMITS.maxDocs) return `screened ${result.screenings.length}, cap is ${LIMITS.maxDocs}`;
+  return result.stoppedReason?.includes(String(many.length)) === true ? null : 'the user is not told how many were left out';
+});
+
+check('intake', 'a zero byte file is reported, not silently excluded', async () => {
+  const s = await screenOne(stubClient(() => '{}'), docFrom('empty.txt', ''));
+  return expect(s.verdict, 'review', 'verdict') ?? (s.note?.includes('OCR') === true ? null : 'unhelpful note: ' + s.note);
+});
+
+check('intake', 'the file picker and the drop handler accept the same types', async () => {
+  // A drop that silently ignores a file the picker would have taken is the kind of
+  // thing nobody notices until a user swears the app lost their document.
+  const app = readFileSync(join(ROOT, 'src', 'App.tsx'), 'utf8');
+  const accept = /accept="([^"]+)"/.exec(app)?.[1] ?? '';
+  const guard = /\\.\(([a-z|]+)\)\$\/i\.test\(file\.name\)/.exec(app)?.[1] ?? '';
+  if (accept === '' || guard === '') return 'could not find the accept list or the extension guard';
+  const offered = accept.split(',').map((x) => x.trim().replace(/^\./, ''));
+  const allowed = guard.split('|');
+  const missing = offered.filter((x) => !allowed.includes(x));
+  return missing.length === 0 ? null : 'the picker offers types the drop handler rejects: ' + missing.join(', ');
+});
+
 // ---------------------------------------------------------------- the words
 
 const BANNED = [
