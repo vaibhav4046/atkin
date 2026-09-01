@@ -122,6 +122,7 @@ went on this list.
 | D5 | P2 | page title | Em dash in the `<title>`, the first thing in the browser tab | **proven fixed** |
 | D6 | P1 | engine | The quote check proves a sentence exists, not that it supports the decision. Seen live: a 2009 paper was included with a genuine verified quote, because the model misread the date criterion. | **open, documented limitation** |
 | D7 | P3 | engine | Two runs of the same corpus at `temperature: 0` gave different verdicts. A model property, not an Atkin defect. | **waived**, noted |
+| D8 | **P0** | run button | Three fast clicks started three concurrent runs and made 27 model calls where one run makes 9. Spend without consent. | **proven fixed** |
 
 ### D1, the evidence for it
 
@@ -164,6 +165,33 @@ absent still says it is absent. Two new checks hold the distinction
 (`scripts/check.ts`, "a one-word quote is reported as too short, not as missing"
 and "an absent quote is still reported as absent").
 
+### D8, the one the double-clicker found
+
+Suite A persona 3, the impatient user who clicks everything twice. This is the
+defect I would not have found by reading the code, because the code looks right.
+
+The run button carries `disabled={... || progress !== null}`. That guard is React
+state, and state does not update until the next render. Three clicks dispatched
+inside a single tick all run their handler before any re-render happens, so all
+three see `progress === null`, all three pass, and all three call `runScreening`.
+The last one to finish sets the result, so the interface looks completely normal.
+Nothing is visibly wrong. The bill is three times what the user agreed to.
+
+Measured in the browser, counting calls by wrapping `window.fetch`, with the
+model pointed at a local URL so every call was countable:
+
+```
+without the guard   27 model calls   (three concurrent runs)
+with the guard       9 model calls   (one run; nine, not ten, because the
+                                      empty scan never calls a model)
+```
+
+The fix is four lines: a `useRef` checked and set synchronously at the top of
+`run`, released in `finally`. A ref updates immediately, so the second click sees
+it. `scripts/check.ts` now asserts the guard exists, is checked first, and is
+released, because the plausible regression here is somebody removing it on the
+grounds that the button is already disabled.
+
 ### D6, why it is open rather than fixed
 
 `05-2009-workstation-pilot.txt` was included by the live model, with a quote that
@@ -188,7 +216,7 @@ it in a second.
 | E, injection and XSS | **green.** Hostile fixture inert, verdict driven by criteria only. Script payloads carried as inert text through CSV and markdown, no row breakout. Static check that nothing in the interface reaches for `dangerouslySetInnerHTML`. |
 | F, export torture, partial | **green so far.** CSV formula guard, RFC 4180 escaping, UTF-8 BOM, counts reconcile exactly, overrides appear in the log. **Not yet done:** xlsx and docx do not exist, double-click, export mid-run. |
 | J, copy and jargon | **green.** Zero banned words across the interface, presets, README, submission facts and showcase. Zero em or en dashes, after D5. Every failure message names what happened and what to do next. |
-| A, personas | **partial.** Cold path, devtools console clean, 375 px, and the live dissertation run are done. Keyboard-only, double-click, and returning user are not. |
+| A, personas | **partial.** Cold path, devtools console clean, 375 px, the live dissertation run, and the impatient double-clicker are done, the last of which found D8. Keyboard-only and returning user are not. |
 | B, ingestion torture | **mostly not applicable.** No PDF, DOCX, or zip support exists to torture. Empty file and no-text-layer are covered. |
 | C, criteria abuse | **not run.** |
 | G, state chaos | **not applicable.** Nothing persists between visits by design. |

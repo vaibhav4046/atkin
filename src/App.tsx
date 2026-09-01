@@ -64,6 +64,11 @@ export default function App() {
   const [over, setOver] = useState(false);
   const [paste, setPaste] = useState('');
   const abort = useRef<AbortController | null>(null);
+  // Guarded with a ref, not with the disabled attribute. Three clicks inside one
+  // tick all see the old state and all pass, so the button being disabled on the
+  // next render stops nothing: it started three concurrent runs and showed the
+  // last. Harmless on prepared answers, three times the bill on a hosted model.
+  const running = useRef(false);
 
   const usingSample = docs.length > 0 && docs.every((d) => SAMPLE_DOCS.some((s) => s.id === d.id));
 
@@ -161,7 +166,8 @@ export default function App() {
   }, [source, docs, preset]);
 
   const run = useCallback(async () => {
-    if (docs.length === 0 || client.problem !== null) return;
+    if (running.current || docs.length === 0 || client.problem !== null) return;
+    running.current = true;
     const controller = new AbortController();
     abort.current = controller;
     setError(null);
@@ -182,6 +188,7 @@ export default function App() {
     } catch (e) {
       setError('The run stopped: ' + (e as Error).message);
     } finally {
+      running.current = false;
       setProgress(null);
       abort.current = null;
     }

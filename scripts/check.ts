@@ -409,6 +409,20 @@ function userFacingText(): { where: string; text: string }[] {
   return out;
 }
 
+check('hostile input', 'a run cannot be started three times by an impatient click', async () => {
+  // Measured in a browser: without a synchronous guard, three clicks inside one
+  // tick started three concurrent runs and made 27 model calls where one run
+  // makes 9. The disabled attribute does not help, because it only takes effect
+  // on the next render, which is after all three handlers have already run.
+  // This is a static check because the defect lives in React state timing, which
+  // Node cannot reproduce, and because the thing worth protecting is the guard
+  // itself being deleted by someone who thinks disabled is enough.
+  const app = readFileSync(join(ROOT, 'src', 'App.tsx'), 'utf8');
+  if (!/const running = useRef\(false\)/.test(app)) return 'the synchronous run guard is gone';
+  if (!/if \(running\.current \|\|/.test(app)) return 'the run guard is no longer checked first';
+  return /running\.current = false/.test(app) ? null : 'the run guard is never released, so a second run can never start';
+});
+
 check('the words', 'no marketing jargon anywhere a user can read', async () => {
   const hits: string[] = [];
   for (const { where, text } of userFacingText()) {
