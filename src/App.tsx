@@ -62,6 +62,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Verdict | 'all'>('all');
   const [over, setOver] = useState(false);
+  const [paste, setPaste] = useState('');
   const abort = useRef<AbortController | null>(null);
 
   const usingSample = docs.length > 0 && docs.every((d) => SAMPLE_DOCS.some((s) => s.id === d.id));
@@ -108,13 +109,39 @@ export default function App() {
     );
   }, []);
 
+  /**
+   * Paste one in.
+   *
+   * Not everything worth screening is a file. An abstract copied off a journal
+   * page, a job advert, the text of a receipt: making somebody save that to disk
+   * first is a step invented by the software, not by the work.
+   */
+  const addPasted = useCallback(() => {
+    const text = paste.trim();
+    if (text.length === 0) return;
+    const firstLine = text.split('\n', 1)[0] ?? '';
+    const name = (firstLine.trim().slice(0, 70) || 'Pasted text') + (firstLine.length > 70 ? '…' : '');
+    setDocs((prev) => [...prev, { id: uid() + '-pasted', name, text, bytes: new TextEncoder().encode(text).length }]);
+    setPaste('');
+    setResult(null);
+    setOverrides({});
+    setError(null);
+  }, [paste]);
+
   const client = useMemo((): { client: ModelClient; problem: string | null } => {
     if (source.kind === 'sample') {
       const unknown = docs.filter((d) => SAMPLE_ANSWERS['screen:' + d.id] === undefined && d.text.trim().length >= LIMITS.minDocChars);
+      // The prepared answers are keyed by document name, so with the sample pile
+      // loaded they would happily replay under a different preset's labels and
+      // produce a receipt run that was really a literature review.
+      const wrongPreset = preset.id !== 'literature-review';
       return {
         client: sampleClient(SAMPLE_ANSWERS),
-        problem:
-          unknown.length > 0
+        problem: wrongPreset
+          ? 'The worked example is a literature review. Switch back to that preset, or pick Ollama or a hosted model to run ' +
+            preset.name.toLowerCase() +
+            ' for real.'
+          : unknown.length > 0
             ? 'The worked example only has prepared answers for its own documents. Pick Ollama or a hosted model to screen your own.'
             : null,
       };
@@ -131,7 +158,7 @@ export default function App() {
       client: openAiClient({ base: cfg.base, model: cfg.model, apiKey: source.key }),
       problem: source.key.trim().length === 0 ? 'Paste your ' + cfg.keyName + ' to run against a hosted model.' : null,
     };
-  }, [source, docs]);
+  }, [source, docs, preset]);
 
   const run = useCallback(async () => {
     if (docs.length === 0 || client.problem !== null) return;
@@ -429,6 +456,24 @@ export default function App() {
                   </button>
                 )}
               </div>
+
+              <details style={{ marginTop: '0.9rem' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '0.8125rem', color: 'var(--ink-soft)' }}>
+                  Or paste one in
+                </summary>
+                <div style={{ marginTop: '0.6rem' }}>
+                  <textarea
+                    aria-label="Paste a document"
+                    placeholder="Paste an abstract, a job description, a receipt. The first line becomes its name."
+                    value={paste}
+                    style={{ minHeight: '7rem' }}
+                    onChange={(e) => setPaste(e.target.value)}
+                  />
+                  <button className="btn" style={{ marginTop: '0.5rem' }} disabled={paste.trim().length === 0} onClick={addPasted}>
+                    Add to the pile
+                  </button>
+                </div>
+              </details>
 
               {error !== null && (
                 <div className="warnbox" style={{ marginTop: '0.9rem' }}>
